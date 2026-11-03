@@ -15,16 +15,17 @@ use git_diff::process_git_diff;
 fn main() {
     let arguments: Vec<String> = std::env::args().collect();
 
-    if arguments
-        .iter()
-        .any(|argument| HELP_FLAGS.contains(&argument.as_str()))
-    {
+    if arguments.iter().any(|argument| {
+        HELP_FLAGS.contains(&argument.as_str())
+    }) {
         print_help();
         return;
     }
 
     if arguments.len() < 2 {
-        println!("Нет аргументов. Используйте --help для справки.");
+        println!(
+            "Нет аргументов. Используйте --help для справки."
+        );
         return;
     }
 

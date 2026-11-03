@@ -13,7 +13,8 @@ fn split_line_ending(line: &str) -> (&str, &str) {
 }
 
 fn indent_rle(line: &str) -> Cow<'_, str> {
-    let indent_length = line.len() - line.trim_start_matches(' ').len();
+    let indent_length =
+        line.len() - line.trim_start_matches(' ').len();
 
     if indent_length < INDENT_WIDTH {
         return Cow::Borrowed(line);
@@ -21,7 +22,9 @@ fn indent_rle(line: &str) -> Cow<'_, str> {
 
     let levels = indent_length / INDENT_WIDTH;
     let remainder = indent_length % INDENT_WIDTH;
-    let mut result = String::with_capacity(line.len() - indent_length + levels + remainder);
+    let mut result = String::with_capacity(
+        line.len() - indent_length + levels + remainder,
+    );
 
     for _ in 0..levels {
         result.push(RLE_CHAR);
@@ -60,11 +63,14 @@ pub fn transform_content(
         }
 
         let body_output = if !is_blank && trim_trailing {
-            Cow::Borrowed(body.trim_end_matches([' ', '\t']))
+            Cow::Borrowed(
+                body.trim_end_matches([' ', '\t']),
+            )
         } else {
             Cow::Borrowed(body)
         };
-        let body_output = if !is_blank && indent_rle_enabled {
+        let body_output = if !is_blank && indent_rle_enabled
+        {
             indent_rle(&body_output)
         } else {
             body_output

@@ -3,10 +3,17 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 
 use crate::config::Config;
-use crate::filters::{dir_on_way_or_inside, file_passes_filters, is_path_excluded};
-use crate::report::{print_captured_overview, print_skipped_binary};
+use crate::filters::{
+    dir_on_way_or_inside, file_passes_filters,
+    is_path_excluded,
+};
+use crate::report::{
+    print_captured_overview, print_skipped_binary,
+};
 use crate::transforms::transform_content;
-use crate::utils::{format_size, is_binary_file, output_file_size};
+use crate::utils::{
+    format_size, is_binary_file, output_file_size,
+};
 
 struct CompressStats {
     line_count: u64,
@@ -23,7 +30,12 @@ pub fn compress(config: &Config) -> std::io::Result<()> {
         captured: Vec::new(),
     };
 
-    process_directory(&config.input_path, &mut writer, config, &mut stats)?;
+    process_directory(
+        &config.input_path,
+        &mut writer,
+        config,
+        &mut stats,
+    )?;
 
     let output_bytes = output_file_size(config);
 
@@ -41,7 +53,8 @@ pub fn compress(config: &Config) -> std::io::Result<()> {
 
     print_skipped_binary(&stats.skipped_binary, "   ");
 
-    let references: Vec<&str> = stats.captured.iter().map(String::as_str).collect();
+    let references: Vec<&str> =
+        stats.captured.iter().map(String::as_str).collect();
 
     print_captured_overview(&references);
 
@@ -77,18 +90,28 @@ fn process_directory(
 
         if path.is_dir() {
             if config.excludes.contains(&file_name)
-                || is_path_excluded(&relative_path, &config.exclude_paths)
-                || !dir_on_way_or_inside(&relative_path, &config.include_paths)
+                || is_path_excluded(
+                    &relative_path,
+                    &config.exclude_paths,
+                )
+                || !dir_on_way_or_inside(
+                    &relative_path,
+                    &config.include_paths,
+                )
             {
                 continue;
             }
 
-            process_directory(&path, writer, config, stats)?;
+            process_directory(
+                &path, writer, config, stats,
+            )?;
 
             continue;
         }
 
-        if !path.is_file() || !file_passes_filters(&relative_path, config) {
+        if !path.is_file()
+            || !file_passes_filters(&relative_path, config)
+        {
             continue;
         }
 
@@ -119,7 +142,10 @@ fn write_file_content(
     line_count: &mut u64,
     config: &Config,
 ) -> std::io::Result<()> {
-    let display_path = path.strip_prefix(root_path).unwrap_or(path).display();
+    let display_path = path
+        .strip_prefix(root_path)
+        .unwrap_or(path)
+        .display();
 
     writeln!(writer, "### {display_path}")?;
 

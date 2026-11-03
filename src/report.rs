@@ -15,16 +15,25 @@ fn insert_path(root: &mut TreeNode, path: &str) {
         .split('/')
         .filter(|part| !part.is_empty())
     {
-        current = current.children.entry(part.to_string()).or_default();
+        current = current
+            .children
+            .entry(part.to_string())
+            .or_default();
     }
 }
 
 fn print_tree_recursive(node: &TreeNode, prefix: &str) {
     let children_count = node.children.len();
 
-    for (index, (name, child)) in node.children.iter().enumerate() {
+    for (index, (name, child)) in
+        node.children.iter().enumerate()
+    {
         let is_last = index + 1 == children_count;
-        let connector = if is_last { "└── " } else { "├── " };
+        let connector = if is_last {
+            "└── "
+        } else {
+            "├── "
+        };
 
         println!("{prefix}{connector}{name}");
 
@@ -56,23 +65,31 @@ fn print_extensions(paths: &[&str]) {
         return;
     }
 
-    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    let mut counts: BTreeMap<String, usize> =
+        BTreeMap::new();
 
     for path in paths {
-        let extension = extension_of(path).unwrap_or_else(|| "<без расширения>".to_string());
+        let extension =
+            extension_of(path).unwrap_or_else(|| {
+                "<без расширения>".to_string()
+            });
 
         *counts.entry(extension).or_insert(0) += 1;
     }
 
     let mut entries: Vec<_> = counts.into_iter().collect();
 
-    entries.sort_by(|left, right| right.1.cmp(&left.1).then(left.0.cmp(&right.0)));
+    entries.sort_by(|left, right| {
+        right.1.cmp(&left.1).then(left.0.cmp(&right.0))
+    });
 
     for (extension, count) in entries {
         if extension.starts_with('<') {
             println!("   {extension} — {count} файл(ов)");
         } else {
-            println!("   .{extension:<10} — {count} файл(ов)");
+            println!(
+                "   .{extension:<10} — {count} файл(ов)"
+            );
         }
     }
 }
@@ -87,7 +104,10 @@ pub fn print_captured_overview(paths: &[&str]) {
     print_extensions(paths);
 }
 
-pub fn print_skipped_binary(skipped: &[String], indent: &str) {
+pub fn print_skipped_binary(
+    skipped: &[String],
+    indent: &str,
+) {
     if skipped.is_empty() {
         return;
     }

@@ -22,7 +22,10 @@ pub fn is_binary_file(path: &Path) -> bool {
     is_binary_bytes(&buffer[..bytes_read])
 }
 
-pub fn is_binary_in_git(base_path: &Path, path: &str) -> bool {
+pub fn is_binary_in_git(
+    base_path: &Path,
+    path: &str,
+) -> bool {
     let Ok(output) = Command::new("git")
         .args(["show", &format!("HEAD:{path}")])
         .current_dir(base_path)
@@ -31,7 +34,8 @@ pub fn is_binary_in_git(base_path: &Path, path: &str) -> bool {
         return false;
     };
 
-    output.status.success() && is_binary_bytes(&output.stdout)
+    output.status.success()
+        && is_binary_bytes(&output.stdout)
 }
 
 pub fn extension_of(path: &str) -> Option<String> {
@@ -46,8 +50,14 @@ pub fn format_size(bytes: u64) -> String {
     const MEGABYTE: u64 = 1024 * KILOBYTE;
 
     match bytes {
-        size if size >= MEGABYTE => format!("{:.2} MB", size as f64 / MEGABYTE as f64),
-        size if size >= KILOBYTE => format!("{:.2} KB", size as f64 / KILOBYTE as f64),
+        size if size >= MEGABYTE => format!(
+            "{:.2} MB",
+            size as f64 / MEGABYTE as f64
+        ),
+        size if size >= KILOBYTE => format!(
+            "{:.2} KB",
+            size as f64 / KILOBYTE as f64
+        ),
         size => format!("{size} B"),
     }
 }

@@ -62,7 +62,10 @@ impl Default for Config {
             output_path: "compress_output.txt".to_string(),
             extensions: Vec::new(),
             exclude_extensions: Vec::new(),
-            excludes: DEFAULT_EXCLUDES.iter().map(|name| name.to_string()).collect(),
+            excludes: DEFAULT_EXCLUDES
+                .iter()
+                .map(|name| name.to_string())
+                .collect(),
             exclude_paths: Vec::new(),
             include_paths: Vec::new(),
             git_mode: false,

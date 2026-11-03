@@ -5,14 +5,20 @@ use std::process::Command;
 
 use crate::config::Config;
 use crate::filters::file_passes_filters;
-use crate::report::{print_captured_overview, print_skipped_binary};
+use crate::report::{
+    print_captured_overview, print_skipped_binary,
+};
 use crate::transforms::transform_content;
 use crate::utils::{
-    format_size, is_binary_bytes, is_binary_file, is_binary_in_git, output_file_size,
+    format_size, is_binary_bytes, is_binary_file,
+    is_binary_in_git, output_file_size,
 };
 
 fn unquote_git_path(path: &str) -> String {
-    if path.len() >= 2 && path.starts_with('"') && path.ends_with('"') {
+    if path.len() >= 2
+        && path.starts_with('"')
+        && path.ends_with('"')
+    {
         path[1..path.len() - 1]
             .replace("\\\"", "\"")
             .replace("\\\\", "\\")
@@ -21,7 +27,11 @@ fn unquote_git_path(path: &str) -> String {
     }
 }
 
-fn read_file_content(base_path: &Path, relative_path: &str, config: &Config) -> Option<String> {
+fn read_file_content(
+    base_path: &Path,
+    relative_path: &str,
+    config: &Config,
+) -> Option<String> {
     let mut content = String::new();
 
     File::open(base_path.join(relative_path))
@@ -49,21 +59,25 @@ fn read_git_show_content(
         .output()
         .ok()?;
 
-    (output.status.success() && !is_binary_bytes(&output.stdout))
-        .then(|| String::from_utf8(output.stdout).ok())
-        .flatten()
-        .map(|content| {
-            transform_content(
-                &content,
-                config.eol_mode,
-                config.indent_rle,
-                config.trim_trailing,
-                config.collapse_blank_lines,
-            )
-        })
+    (output.status.success()
+        && !is_binary_bytes(&output.stdout))
+    .then(|| String::from_utf8(output.stdout).ok())
+    .flatten()
+    .map(|content| {
+        transform_content(
+            &content,
+            config.eol_mode,
+            config.indent_rle,
+            config.trim_trailing,
+            config.collapse_blank_lines,
+        )
+    })
 }
 
-fn write_with_newline(writer: &mut BufWriter<File>, value: &str) -> std::io::Result<()> {
+fn write_with_newline(
+    writer: &mut BufWriter<File>,
+    value: &str,
+) -> std::io::Result<()> {
     write!(writer, "{value}")?;
 
     if !value.ends_with('\n') {
@@ -73,7 +87,9 @@ fn write_with_newline(writer: &mut BufWriter<File>, value: &str) -> std::io::Res
     Ok(())
 }
 
-pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
+pub fn process_git_diff(
+    config: &Config,
+) -> std::io::Result<()> {
     let status_output = Command::new("git")
         .args(["status", "--porcelain"])
         .current_dir(&config.input_path)
@@ -84,7 +100,10 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
     let mut modified = Vec::new();
     let mut deleted = Vec::new();
 
-    for line in String::from_utf8_lossy(&status_output.stdout).lines() {
+    for line in
+        String::from_utf8_lossy(&status_output.stdout)
+            .lines()
+    {
         if line.len() < 4 {
             continue;
         }
@@ -93,7 +112,9 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
         let raw_path = line[3..].trim();
 
         if status.contains(['R', 'C']) {
-            if let Some((old_path, new_path)) = raw_path.split_once(" -> ") {
+            if let Some((old_path, new_path)) =
+                raw_path.split_once(" -> ")
+            {
                 deleted.push(unquote_git_path(old_path));
                 added.push(unquote_git_path(new_path));
             }
@@ -112,22 +133,38 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
         }
     }
 
-    let partition_existing = |paths: Vec<String>| -> (Vec<String>, Vec<String>) {
+    let partition_existing = |paths: Vec<String>| -> (
+        Vec<String>,
+        Vec<String>,
+    ) {
         paths
             .into_iter()
-            .filter(|path| file_passes_filters(path, config))
-            .partition(|path| !is_binary_file(&config.input_path.join(path)))
+            .filter(|path| {
+                file_passes_filters(path, config)
+            })
+            .partition(|path| {
+                !is_binary_file(
+                    &config.input_path.join(path),
+                )
+            })
     };
 
-    let (captured_added, mut skipped_binary) = partition_existing(added);
-    let (captured_modified, skipped_modified) = partition_existing(modified);
+    let (captured_added, mut skipped_binary) =
+        partition_existing(added);
+    let (captured_modified, skipped_modified) =
+        partition_existing(modified);
 
     skipped_binary.extend(skipped_modified);
 
-    let (captured_deleted, skipped_deleted): (Vec<_>, Vec<_>) = deleted
+    let (captured_deleted, skipped_deleted): (
+        Vec<_>,
+        Vec<_>,
+    ) = deleted
         .into_iter()
         .filter(|path| file_passes_filters(path, config))
-        .partition(|path| !is_binary_in_git(&config.input_path, path));
+        .partition(|path| {
+            !is_binary_in_git(&config.input_path, path)
+        });
 
     skipped_binary.extend(skipped_deleted);
 
@@ -140,7 +177,11 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
         for path in &captured_added {
             writeln!(writer, "### {path}")?;
 
-            if let Some(content) = read_file_content(&config.input_path, path, config) {
+            if let Some(content) = read_file_content(
+                &config.input_path,
+                path,
+                config,
+            ) {
                 write_with_newline(&mut writer, &content)?;
             }
         }
@@ -155,14 +196,25 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
             writeln!(writer, "### {path}")?;
             writeln!(writer, ">>> current")?;
 
-            if let Some(content) = read_file_content(&config.input_path, path, config) {
+            if let Some(content) = read_file_content(
+                &config.input_path,
+                path,
+                config,
+            ) {
                 write_with_newline(&mut writer, &content)?;
             }
 
             writeln!(writer, "<<< previous")?;
 
-            match read_git_show_content(&config.input_path, path, config) {
-                Some(content) => write_with_newline(&mut writer, &content)?,
+            match read_git_show_content(
+                &config.input_path,
+                path,
+                config,
+            ) {
+                Some(content) => write_with_newline(
+                    &mut writer,
+                    &content,
+                )?,
                 None => writeln!(writer, "<n/a>")?,
             }
         }
@@ -208,7 +260,9 @@ pub fn process_git_diff(config: &Config) -> std::io::Result<()> {
 
     println!(
         "✅ Successfully captured {} files.",
-        captured_added.len() + captured_modified.len() + captured_deleted.len()
+        captured_added.len()
+            + captured_modified.len()
+            + captured_deleted.len()
     );
 
     let all_paths: Vec<&str> = captured_added

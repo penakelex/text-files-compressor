@@ -1,19 +1,28 @@
 use std::path::{Path, PathBuf};
 
-use crate::config::{Config, EolMode, HELP_FLAGS, INDENT_WIDTH, RLE_CHAR};
+use crate::config::{
+    Config, EolMode, HELP_FLAGS, INDENT_WIDTH, RLE_CHAR,
+};
 
-fn parse_extensions(raw: &str) -> impl Iterator<Item = String> + '_ {
+fn parse_extensions(
+    raw: &str,
+) -> impl Iterator<Item = String> + '_ {
     raw.split(',')
         .map(|item| item.trim().to_lowercase())
         .filter(|item| !item.is_empty())
 }
 
-fn parse_paths(raw: &str) -> impl Iterator<Item = String> + '_ {
+fn parse_paths(
+    raw: &str,
+) -> impl Iterator<Item = String> + '_ {
     raw.split(',')
-        .map(|item| item.trim().replace('\\', "/").to_lowercase())
+        .map(|item| {
+            item.trim().replace('\\', "/").to_lowercase()
+        })
         .map(|item| {
             let item = item.trim_matches('/');
-            let item = item.strip_prefix("./").unwrap_or(item);
+            let item =
+                item.strip_prefix("./").unwrap_or(item);
 
             item.trim_end_matches('/').to_string()
         })
@@ -65,7 +74,9 @@ static OPTIONS: &[OptionSpec] = &[
         help: "Имя выходного файла.",
         preamble_label: Some("📦 Output"),
         default_display: Some("compress_output.txt"),
-        apply: |config, value| config.output_path = value.to_string(),
+        apply: |config, value| {
+            config.output_path = value.to_string()
+        },
         render: |config| config.output_path.clone(),
     },
     OptionSpec {
@@ -76,7 +87,11 @@ static OPTIONS: &[OptionSpec] = &[
         help: "Разрешённые расширения. Пусто — включить все.",
         preamble_label: Some("📄 Extensions"),
         default_display: None,
-        apply: |config, value| config.extensions.extend(parse_extensions(value)),
+        apply: |config, value| {
+            config
+                .extensions
+                .extend(parse_extensions(value))
+        },
         render: |config| format!("{:?}", config.extensions),
     },
     OptionSpec {
@@ -87,8 +102,14 @@ static OPTIONS: &[OptionSpec] = &[
         help: "Исключаемые расширения (побеждает над --extensions).",
         preamble_label: Some("🚫 Excluded extensions"),
         default_display: None,
-        apply: |config, value| config.exclude_extensions.extend(parse_extensions(value)),
-        render: |config| format!("{:?}", config.exclude_extensions),
+        apply: |config, value| {
+            config
+                .exclude_extensions
+                .extend(parse_extensions(value))
+        },
+        render: |config| {
+            format!("{:?}", config.exclude_extensions)
+        },
     },
     OptionSpec {
         name: "--exclude",
@@ -97,8 +118,12 @@ static OPTIONS: &[OptionSpec] = &[
         argument_placeholder: Some("<names>"),
         help: "Имена директорий для исключения (на любой глубине).",
         preamble_label: Some("🚫 Exclude names"),
-        default_display: Some("target, .git, node_modules, .idea, out, build"),
-        apply: |config, value| config.excludes.extend(parse_extensions(value)),
+        default_display: Some(
+            "target, .git, node_modules, .idea, out, build",
+        ),
+        apply: |config, value| {
+            config.excludes.extend(parse_extensions(value))
+        },
         render: |config| format!("{:?}", config.excludes),
     },
     OptionSpec {
@@ -109,19 +134,31 @@ static OPTIONS: &[OptionSpec] = &[
         help: "Исключить пути (файлы/директории) относительно input_path.",
         preamble_label: Some("🚫 Exclude paths"),
         default_display: None,
-        apply: |config, value| config.exclude_paths.extend(parse_paths(value)),
-        render: |config| format!("{:?}", config.exclude_paths),
+        apply: |config, value| {
+            config.exclude_paths.extend(parse_paths(value))
+        },
+        render: |config| {
+            format!("{:?}", config.exclude_paths)
+        },
     },
     OptionSpec {
         name: "--include-paths",
-        aliases: &["--include-dirs", "--only-dirs", "--only-paths"],
+        aliases: &[
+            "--include-dirs",
+            "--only-dirs",
+            "--only-paths",
+        ],
         kind: OptionKind::ListValue,
         argument_placeholder: Some("<paths>"),
         help: "Белый список путей (файлы и/или директории). \".\" — корень.",
         preamble_label: Some("📂 Include paths"),
         default_display: None,
-        apply: |config, value| config.include_paths.extend(parse_paths(value)),
-        render: |config| format!("{:?}", config.include_paths),
+        apply: |config, value| {
+            config.include_paths.extend(parse_paths(value))
+        },
+        render: |config| {
+            format!("{:?}", config.include_paths)
+        },
     },
     OptionSpec {
         name: "--indent-rle",
@@ -186,21 +223,27 @@ static OPTIONS: &[OptionSpec] = &[
             }));
         },
         render: |config| {
-            config
-                .collapse_blank_lines
-                .map_or_else(|| "off".into(), |lines| format!("max {lines}"))
+            config.collapse_blank_lines.map_or_else(
+                || "off".into(),
+                |lines| format!("max {lines}"),
+            )
         },
     },
 ];
 
-fn find_spec(argument: &str) -> Option<&'static OptionSpec> {
-    OPTIONS
-        .iter()
-        .find(|spec| spec.name == argument || spec.aliases.contains(&argument))
+fn find_spec(
+    argument: &str,
+) -> Option<&'static OptionSpec> {
+    OPTIONS.iter().find(|spec| {
+        spec.name == argument
+            || spec.aliases.contains(&argument)
+    })
 }
 
 fn looks_like_path(value: &str) -> bool {
-    value.contains('/') || value.contains('\\') || Path::new(value).exists()
+    value.contains('/')
+        || value.contains('\\')
+        || Path::new(value).exists()
 }
 
 fn consume_list(
@@ -210,15 +253,20 @@ fn consume_list(
 ) -> (String, usize) {
     let mut end_index = start_index;
 
-    while end_index < arguments.len() && !arguments[end_index].starts_with("--") {
-        if input_path.is_none() && looks_like_path(&arguments[end_index]) {
+    while end_index < arguments.len()
+        && !arguments[end_index].starts_with("--")
+    {
+        if input_path.is_none()
+            && looks_like_path(&arguments[end_index])
+        {
             break;
         }
 
         end_index += 1;
     }
 
-    let value = arguments[start_index..end_index].join(", ");
+    let value =
+        arguments[start_index..end_index].join(", ");
     let last_index = if end_index > start_index {
         end_index - 1
     } else {
@@ -238,7 +286,9 @@ pub fn parse_args(arguments: &[String]) -> Config {
 
         if let Some(spec) = find_spec(argument) {
             match spec.kind {
-                OptionKind::Flag => (spec.apply)(&mut config, ""),
+                OptionKind::Flag => {
+                    (spec.apply)(&mut config, "")
+                }
                 OptionKind::SingleValue => {
                     index += 1;
                     assert!(
@@ -246,11 +296,17 @@ pub fn parse_args(arguments: &[String]) -> Config {
                         "{name} requires a value",
                         name = spec.name
                     );
-                    (spec.apply)(&mut config, &arguments[index]);
+                    (spec.apply)(
+                        &mut config,
+                        &arguments[index],
+                    );
                 }
                 OptionKind::ListValue => {
-                    let (value, new_index) =
-                        consume_list(arguments, index + 1, &input_path);
+                    let (value, new_index) = consume_list(
+                        arguments,
+                        index + 1,
+                        &input_path,
+                    );
                     (spec.apply)(&mut config, &value);
                     index = new_index;
                 }
@@ -262,13 +318,17 @@ pub fn parse_args(arguments: &[String]) -> Config {
         index += 1;
     }
 
-    config.input_path = input_path.expect("Input path is required");
+    config.input_path =
+        input_path.expect("Input path is required");
 
     config
 }
 
 pub fn print_preamble(config: &Config) {
-    println!("🚀 Analyzing: {}", config.input_path.display());
+    println!(
+        "🚀 Analyzing: {}",
+        config.input_path.display()
+    );
 
     for spec in OPTIONS {
         if let Some(label) = spec.preamble_label {
@@ -292,7 +352,9 @@ pub fn print_help() {
                 header.push_str(alias);
             }
 
-            if let Some(placeholder) = spec.argument_placeholder {
+            if let Some(placeholder) =
+                spec.argument_placeholder
+            {
                 header.push(' ');
                 header.push_str(placeholder);
             }
@@ -300,7 +362,9 @@ pub fn print_help() {
             let mut help = spec.help.to_string();
 
             if let Some(default) = spec.default_display {
-                help.push_str(&format!(" (по умолчанию: {default})"));
+                help.push_str(&format!(
+                    " (по умолчанию: {default})"
+                ));
             }
 
             (header, help)
@@ -333,7 +397,9 @@ OPTIONS:"
         println!("    {header:<width$} {help}");
     }
 
-    println!("    {help_flags:<width$} Показать эту справку.");
+    println!(
+        "    {help_flags:<width$} Показать эту справку."
+    );
 
     println!(
         r"
