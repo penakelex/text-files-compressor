@@ -1,0 +1,9 @@
+{
+  "name": "text-files-compressor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Git hooks for the text-files-compressor Rust project",
+  "devDependencies": {
+    "lefthook": "^2.0.0"
+  }
+}
