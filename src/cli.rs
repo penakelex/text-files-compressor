@@ -186,12 +186,23 @@ pub struct Transforms {
     pub collapse_blank_lines: Option<usize>,
 }
 
+fn resolve_path(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn display_path(path: &Path) -> String {
+    let resolved = resolve_path(path);
+    let text = resolved.to_string_lossy();
+
+    text.strip_prefix(r"\\?\").unwrap_or(&text).to_string()
+}
+
 fn default_output_name(
     input: &Path,
     git_mode: bool,
 ) -> String {
-    let resolved = std::fs::canonicalize(input)
-        .unwrap_or_else(|_| input.to_path_buf());
+    let resolved = resolve_path(input);
 
     let stem = resolved
         .file_name()
@@ -247,7 +258,7 @@ impl CommonArgs {
 pub fn print_preamble(config: &Config) {
     println!(
         "🚀 Analyzing: {}",
-        config.input_path.display()
+        display_path(&config.input_path)
     );
     println!(
         "🔧 Mode: {}",
