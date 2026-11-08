@@ -19,9 +19,12 @@ const AFTER_HELP: &str = "\
     --collapse-blank-lines N: не более N подряд пустых строк (0 — убрать все).
 
 \x1b[1m\x1b[4mФОРМАТ СПИСКОВ:\x1b[0m
-    Списки передаются через запятую или повторением флага:
+    Списки передаются через запятую, пробел или повторением флага:
         --extensions kt,kts,xml
+        --extensions kt kts xml
         --extensions kt --extensions kts
+    INPUT_PATH должен идти первым аргументом после подкоманды:
+        script compress ./project --extensions kt kts
 
 \x1b[1m\x1b[4mПРИМЕРЫ:\x1b[0m
     script compress ./project --out full.txt \\
@@ -45,6 +48,38 @@ fn default_excludes() -> Vec<String> {
         })
         .map(str::to_lowercase)
         .collect()
+}
+
+fn resolve_path(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn display_path(path: &Path) -> String {
+    let resolved = resolve_path(path);
+    let text = resolved.to_string_lossy();
+
+    text.strip_prefix(r"\\?\").unwrap_or(&text).to_string()
+}
+
+fn default_output_name(
+    input: &Path,
+    git_mode: bool,
+) -> String {
+    let resolved = resolve_path(input);
+
+    let stem = resolved
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or("compress_output");
+
+    if git_mode {
+        format!("{stem}.git-diff.txt")
+    } else {
+        format!("{stem}.txt")
+    }
 }
 
 #[derive(Parser)]
@@ -95,7 +130,11 @@ pub enum Command {
     next_help_heading = "ОСНОВНЫЕ ПАРАМЕТРЫ"
 )]
 pub struct CommonArgs {
-    #[arg(help = "Путь к папке проекта.")]
+    #[arg(
+        index = 1,
+        value_name = "INPUT_PATH",
+        help = "Путь к папке проекта. Должен быть первым аргументом после подкоманды."
+    )]
     pub input_path: PathBuf,
 
     #[arg(
@@ -127,6 +166,7 @@ pub struct Filters {
     #[arg(
         long,
         alias = "exts",
+        num_args = 1..,
         value_delimiter = ',',
         help = "Разрешённые расширения. Пусто — включить все."
     )]
@@ -135,6 +175,7 @@ pub struct Filters {
     #[arg(
         long,
         alias = "exclude-exts",
+        num_args = 1..,
         value_delimiter = ',',
         help = "Исключаемые расширения (побеждает над --extensions)."
     )]
@@ -143,6 +184,7 @@ pub struct Filters {
     #[arg(
         long,
         alias = "excludes",
+        num_args = 1..,
         value_delimiter = ',',
         help = "Имена директорий для исключения (на любой глубине). \
                 По умолчанию — встроенный список из resources/default_excludes.txt."
@@ -152,6 +194,7 @@ pub struct Filters {
     #[arg(
         long,
         alias = "exclude-path",
+        num_args = 1..,
         value_delimiter = ',',
         help = "Исключить пути (файлы/директории) относительно input_path."
     )]
@@ -160,6 +203,7 @@ pub struct Filters {
     #[arg(
         long,
         aliases = ["include-dirs", "only-dirs", "only-paths"],
+        num_args = 1..,
         value_delimiter = ',',
         help = "Белый список путей (файлы и/или директории). \".\" — корень."
     )]
@@ -200,38 +244,6 @@ pub struct Transforms {
     pub collapse_blank_lines: Option<usize>,
 }
 
-fn resolve_path(path: &Path) -> PathBuf {
-    std::fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf())
-}
-
-fn display_path(path: &Path) -> String {
-    let resolved = resolve_path(path);
-    let text = resolved.to_string_lossy();
-
-    text.strip_prefix(r"\\?\").unwrap_or(&text).to_string()
-}
-
-fn default_output_name(
-    input: &Path,
-    git_mode: bool,
-) -> String {
-    let resolved = resolve_path(input);
-
-    let stem = resolved
-        .file_name()
-        .and_then(|name| name.to_str())
-        .map(str::trim)
-        .filter(|name| !name.is_empty())
-        .unwrap_or("compress_output");
-
-    if git_mode {
-        format!("{stem}.git-diff.txt")
-    } else {
-        format!("{stem}.txt")
-    }
-}
-
 impl CommonArgs {
     pub fn into_config(self, git_mode: bool) -> Config {
         let Filters {
@@ -248,15 +260,15 @@ impl CommonArgs {
             collapse_blank_lines,
         } = self.transforms;
 
-        let output_path = self.out.unwrap_or_else(|| {
-            default_output_name(&self.input_path, git_mode)
-        });
-
         let excludes = if exclude.is_empty() {
             default_excludes()
         } else {
             exclude
         };
+
+        let output_path = self.out.unwrap_or_else(|| {
+            default_output_name(&self.input_path, git_mode)
+        });
 
         Config {
             input_path: self.input_path,
