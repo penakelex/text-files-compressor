@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Args, Parser, Subcommand};
 
@@ -86,10 +86,10 @@ pub struct CommonArgs {
 
     #[arg(
         long,
-        default_value = "compress_output.txt",
-        help = "Имя выходного файла."
+        help = "Имя выходного файла. По умолчанию: <имя input_path>.txt \
+                для compress и <имя input_path>.git-diff.txt для git-diff."
     )]
-    pub out: String,
+    pub out: Option<String>,
 
     #[command(flatten)]
     pub filters: Filters,
@@ -186,6 +186,27 @@ pub struct Transforms {
     pub collapse_blank_lines: Option<usize>,
 }
 
+fn default_output_name(
+    input: &Path,
+    git_mode: bool,
+) -> String {
+    let resolved = std::fs::canonicalize(input)
+        .unwrap_or_else(|_| input.to_path_buf());
+
+    let stem = resolved
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or("compress_output");
+
+    if git_mode {
+        format!("{stem}.git-diff.txt")
+    } else {
+        format!("{stem}.txt")
+    }
+}
+
 impl CommonArgs {
     pub fn into_config(self, git_mode: bool) -> Config {
         let Filters {
@@ -202,9 +223,13 @@ impl CommonArgs {
             collapse_blank_lines,
         } = self.transforms;
 
+        let output_path = self.out.unwrap_or_else(|| {
+            default_output_name(&self.input_path, git_mode)
+        });
+
         Config {
             input_path: self.input_path,
-            output_path: self.out,
+            output_path,
             extensions,
             exclude_extensions,
             excludes: exclude,
