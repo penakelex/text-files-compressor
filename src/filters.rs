@@ -1,6 +1,20 @@
 use crate::config::Config;
 use crate::utils::extension_of;
 
+fn normalize_path(path: &str) -> String {
+    let normalized = path
+        .replace('\\', "/")
+        .trim_start_matches("./")
+        .trim_matches('/')
+        .to_lowercase();
+
+    if normalized.is_empty() || normalized == "." {
+        String::new()
+    } else {
+        normalized
+    }
+}
+
 pub fn matches_extensions(
     path: &str,
     extensions: &[String],
@@ -24,11 +38,14 @@ pub fn is_excluded(
     path: &str,
     excludes: &[String],
 ) -> bool {
-    let normalized_path =
-        path.to_lowercase().replace('\\', "/");
+    let normalized_path = normalize_path(path);
 
     excludes.iter().any(|excluded| {
-        let excluded = excluded.to_lowercase();
+        let excluded = normalize_path(excluded);
+
+        if excluded.is_empty() {
+            return false;
+        }
 
         normalized_path.contains(&format!("/{excluded}/"))
             || normalized_path
@@ -45,12 +62,15 @@ pub fn is_path_excluded(
         return false;
     }
 
-    let relative =
-        relative_path.replace('\\', "/").to_lowercase();
+    let relative = normalize_path(relative_path);
 
     exclude_paths.iter().any(|pattern| {
-        relative == *pattern
-            || relative.starts_with(&format!("{pattern}/"))
+        let pattern = normalize_path(pattern);
+
+        !pattern.is_empty()
+            && (relative == pattern
+                || relative
+                    .starts_with(&format!("{pattern}/")))
     })
 }
 
@@ -62,15 +82,17 @@ pub fn dir_on_way_or_inside(
         return true;
     }
 
-    let relative = relative_directory
-        .replace('\\', "/")
-        .to_lowercase();
+    let relative = normalize_path(relative_directory);
+
+    if relative.is_empty() {
+        return true;
+    }
 
     includes.iter().any(|include| {
+        let include = normalize_path(include);
+
         include.is_empty()
-            || include == "."
-            || include == "./"
-            || relative == *include
+            || relative == include
             || include.starts_with(&format!("{relative}/"))
             || relative.starts_with(&format!("{include}/"))
     })
@@ -84,14 +106,13 @@ pub fn file_in_included_dir(
         return true;
     }
 
-    let relative =
-        relative_file.replace('\\', "/").to_lowercase();
+    let relative = normalize_path(relative_file);
 
     includes.iter().any(|include| {
+        let include = normalize_path(include);
+
         include.is_empty()
-            || include == "."
-            || include == "./"
-            || relative == *include
+            || relative == include
             || relative.starts_with(&format!("{include}/"))
     })
 }

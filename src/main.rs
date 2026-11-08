@@ -7,29 +7,19 @@ mod report;
 mod transforms;
 mod utils;
 
-use cli::{parse_args, print_help, print_preamble};
+use clap::Parser;
+
+use cli::{Cli, Command, print_preamble};
 use compress::compress;
-use config::HELP_FLAGS;
 use git_diff::process_git_diff;
 
 fn main() {
-    let arguments: Vec<String> = std::env::args().collect();
+    let cli = Cli::parse();
 
-    if arguments.iter().any(|argument| {
-        HELP_FLAGS.contains(&argument.as_str())
-    }) {
-        print_help();
-        return;
-    }
-
-    if arguments.len() < 2 {
-        println!(
-            "Нет аргументов. Используйте --help для справки."
-        );
-        return;
-    }
-
-    let config = parse_args(&arguments);
+    let config = match cli.command {
+        Command::Compress(args) => args.into_config(false),
+        Command::GitDiff(args) => args.into_config(true),
+    };
 
     print_preamble(&config);
 
