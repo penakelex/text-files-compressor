@@ -21,9 +21,9 @@ pub fn print_preamble(config: &Config) {
         "🚫 Excluded extensions: {:?}",
         config.exclude_extensions
     );
-    println!("🚫 Exclude names: {:?}", config.excludes);
+    println!("📁 Exclude names: {:?}", config.excludes);
     println!(
-        "🚫 Exclude paths: {:?}",
+        "⛔ Exclude paths: {:?}",
         config.exclude_paths
     );
     println!(

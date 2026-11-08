@@ -35,8 +35,7 @@ pub fn compress(config: &Config) -> std::io::Result<()> {
     let output_bytes = output_file_size(config);
 
     println!(
-        r"-----------------------------------
-✅ Successfully captured {} files.
+        r"✅ Successfully captured {} files.
 📏 Total lines: {}
 🚫 Skipped binary files: {}
 💾 Output size: {} ({output_bytes} bytes)",
