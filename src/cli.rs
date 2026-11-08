@@ -33,6 +33,20 @@ const AFTER_HELP: &str = "\
         --extensions java,kts,xml,json,toml,md,yml,yaml
 ";
 
+const DEFAULT_EXCLUDES_RAW: &str =
+    include_str!("../resources/default_excludes.txt");
+
+fn default_excludes() -> Vec<String> {
+    DEFAULT_EXCLUDES_RAW
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            !line.is_empty() && !line.starts_with('#')
+        })
+        .map(str::to_lowercase)
+        .collect()
+}
+
 #[derive(Parser)]
 #[command(
     name = "text-files-compressor",
@@ -130,8 +144,8 @@ pub struct Filters {
         long,
         alias = "excludes",
         value_delimiter = ',',
-        default_value = "target,.git,node_modules,.idea,out,build",
-        help = "Имена директорий для исключения (на любой глубине)."
+        help = "Имена директорий для исключения (на любой глубине). \
+                По умолчанию — встроенный список из resources/default_excludes.txt."
     )]
     pub exclude: Vec<String>,
 
@@ -238,12 +252,18 @@ impl CommonArgs {
             default_output_name(&self.input_path, git_mode)
         });
 
+        let excludes = if exclude.is_empty() {
+            default_excludes()
+        } else {
+            exclude
+        };
+
         Config {
             input_path: self.input_path,
             output_path,
             extensions,
             exclude_extensions,
-            excludes: exclude,
+            excludes,
             exclude_paths,
             include_paths,
             git_mode,
