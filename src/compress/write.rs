@@ -8,26 +8,26 @@ use crate::transforms::transform_content;
 pub(crate) fn write_file_content(
     root_path: &Path,
     path: &Path,
+    bytes: &[u8],
     writer: &mut BufWriter<File>,
     line_count: &mut u64,
     config: &Config,
 ) -> std::io::Result<bool> {
-    let Ok(bytes) = std::fs::read(path) else {
-        return Ok(false);
-    };
-    let Ok(content) = String::from_utf8(bytes) else {
+    let Ok(content) = std::str::from_utf8(bytes) else {
         return Ok(false);
     };
 
     let display_path = path
         .strip_prefix(root_path)
         .unwrap_or(path)
-        .display();
+        .display()
+        .to_string()
+        .replace('\\', "/");
 
     writeln!(writer, "### {display_path}")?;
 
     let transformed = transform_content(
-        &content,
+        content,
         config.eol_mode,
         config.indent_rle,
         config.trim_trailing,
@@ -36,14 +36,16 @@ pub(crate) fn write_file_content(
 
     writer.write_all(transformed.as_bytes())?;
 
-    *line_count += transformed
-        .bytes()
-        .filter(|&byte| byte == b'\n')
-        .count() as u64;
+    let mut newlines =
+        transformed.bytes().filter(|&byte| byte == b'\n').count()
+            as u64;
 
-    if !transformed.ends_with('\n') {
+    if !transformed.is_empty() && !transformed.ends_with('\n') {
         writer.write_all(b"\n")?;
+        newlines += 1;
     }
+
+    *line_count += newlines;
 
     Ok(true)
 }

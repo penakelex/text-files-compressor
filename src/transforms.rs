@@ -62,15 +62,12 @@ pub fn transform_content(
             blank_run = 0;
         }
 
-        let body_output = if !is_blank && trim_trailing {
-            Cow::Borrowed(
-                body.trim_end_matches([' ', '\t']),
-            )
+        let body_output = if trim_trailing {
+            Cow::Borrowed(body.trim_end_matches([' ', '\t']))
         } else {
             Cow::Borrowed(body)
         };
-        let body_output = if !is_blank && indent_rle_enabled
-        {
+        let body_output = if !is_blank && indent_rle_enabled {
             indent_rle(&body_output)
         } else {
             body_output

@@ -7,9 +7,7 @@ pub(crate) fn default_excludes() -> Vec<String> {
     DEFAULT_EXCLUDES_RAW
         .lines()
         .map(str::trim)
-        .filter(|line| {
-            !line.is_empty() && !line.starts_with('#')
-        })
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(str::to_lowercase)
         .collect()
 }

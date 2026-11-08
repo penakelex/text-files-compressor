@@ -9,8 +9,22 @@ pub(crate) const AFTER_HELP: &str = "\
 \n\x1b[1m\x1b[4mФОРМАТ ВЫВОДА:\x1b[0m
     Каждый файл начинается с '### path'. Пустых строк между файлами нет.
     --indent-rle: 4 пробела отступа → один символ RLE ('\\t').
-    --eol-mode:   auto — как в исходнике, lf — все '\\n', crlf — все '\\r\\n'.
+    --eol-mode:   auto — сохраняет EOL как в исходнике, lf — все '\\n',
+                  crlf — все '\\r\\n'.
     --collapse-blank-lines N: не более N подряд пустых строк (0 — убрать все).
+    --trim-trailing срезает пробелы и табы в конце ЛЮБОЙ строки,
+    включая пустые.
+
+    Финальный '\\n' добавляется, если содержимое файла не заканчивается
+    переводом строки — это нужно как разделитель перед следующим
+    заголовком '### path'. Для --eol-mode auto это единственное
+    исключение из «сохранить как в исходнике».
+
+\x1b[1m\x1b[4mВЫХОДНОЙ ФАЙЛ:\x1b[0m
+    --out (и значение по умолчанию) считается относительно текущей
+    рабочей директории (CWD), а не относительно INPUT_PATH.
+    Запись атомарная: сначала пишется '<out>.tmp', затем rename.
+    При ошибке во время обхода промежуточный файл удаляется.
 
 \x1b[1m\x1b[4mGLOB-ШАБЛОНЫ:\x1b[0m
     --include-paths и --exclude-paths принимают glob-шаблоны:
@@ -21,15 +35,50 @@ pub(crate) const AFTER_HELP: &str = "\
     Обычные пути (без символов * ? [ ] { }) работают как раньше —
     точное совпадение или совпадение по префиксу директории.
 
+    ВАЖНО: '*' не пересекает '/' — для рекурсивного обхода используйте '**'.
+        'src/*'    → файлы непосредственно в src/
+        'src/**'   → все файлы на любой глубине под src/
+    --exclude-paths дополнительно неявно добавляет '<pattern>/**' —
+    исключается и сам путь, и всё под ним. --include-paths так не делает,
+    поэтому для рекурсивного включения пишите '**' явно.
+    --exclude-paths 'src/**' также отсекает сам каталог 'src' при обходе.
+
+    Невалидный glob-паттерн — фатальная ошибка: программа завершается
+    с кодом 1, чтобы нельзя было случайно получить широкий результат
+    из-за опечатки в --include-paths.
+
+    Экранирование: '\\' используется как разделитель пути и заменяется
+    на '/'. Для литерального '*' используйте '[*]', для '?' — '[?]'.
+
 \x1b[1m\x1b[4m--exclude vs --exclude-paths:\x1b[0m
     --exclude          — имена (директория ИЛИ файл) на любой глубине.
-                         Поддерживаются glob-шаблоны.
+                         Поддерживаются glob-шаблоны и пути с '/'.
                          --exclude utils.rs      → исключит src/utils.rs, lib/utils.rs, utils.rs
                          --exclude '*.log'       → исключит любой *.log на любой глубине
                          --exclude target        → исключит любую директорию target
+                         --exclude src/utils.rs  → исключит только src/utils.rs
     --exclude-paths    — пути/glob-шаблоны относительно input_path.
                          --exclude-paths src/utils.rs   → только этот файл
                          --exclude-paths 'src/**/*.rs'  → все .rs под src/
+
+\x1b[1m\x1b[4mGIT-DIFF:\x1b[0m
+    INPUT_PATH может быть подкаталогом git-репозитория. Пути в отчёте
+    выводятся относительно INPUT_PATH, изменения за пределами INPUT_PATH
+    в отчёт не попадают (включая non-UTF-8 пути).
+    Copy-статус (C) учитывается только как новый путь; исходный файл
+    не считается удалённым.
+
+    Сравнение идёт между рабочей копией (current) и HEAD (previous),
+    независимо от того, застейджены изменения или нет. При статусах
+    AD/MD (файл в индексе, но удалён из working tree) current = <n/a>.
+    Для чтения содержимого из индекса используйте отдельный инструмент.
+
+\x1b[1m\x1b[4mСИМЛИНКИ:\x1b[0m
+    Симлинки не разыменовываются и не обходятся — пропускаются в обоих
+    режимах (compress и git-diff). В git-diff симлинки и submodule
+    в статусе added/modified попадают в соответствующие списки
+    пропущенных. Удалённые пути классифицировать нельзя (их нет
+    на диске), поэтому deleted-ветка их не различает.
 
 \x1b[1m\x1b[4mФОРМАТ СПИСКОВ:\x1b[0m
     Списки передаются через запятую, пробел или повторением флага:
@@ -37,19 +86,24 @@ pub(crate) const AFTER_HELP: &str = "\
         --extensions kt kts xml
         --extensions kt --extensions kts
     INPUT_PATH должен идти первым аргументом после подкоманды:
-        script compress ./project --extensions kt kts
+        text-files-compressor compress ./project --extensions kt kts
+
+\x1b[1m\x1b[4mРЕГИСТР:\x1b[0m
+    Имена файлов/директорий и glob-шаблоны сравниваются без учёта
+    регистра (всё приводится к нижнему). Это значит, что '[A-Z]*'
+    эквивалентно '[a-z]*', а '--exclude Target' исключит и 'target'.
 
 \x1b[1m\x1b[4mПРИМЕРЫ:\x1b[0m
-    script compress ./project --out full.txt \\
+    text-files-compressor compress ./project --out full.txt \\
         --include-paths 'src/**,config/*.json' \\
         --exclude-paths 'gradle/wrapper,build,**/generated/**' \\
         --exclude utils.rs,*.log \\
-        --rle --eol-mode lf --trim-trailing --collapse-blank-lines 1
+        --indent-rle --eol-mode lf --trim-trailing --collapse-blank-lines 1
 
-    script compress ./project \\
+    text-files-compressor compress ./project \\
         --include-paths 'src/**' \\
         --exclude '**/test/**'
 
-    script git-diff ./project --out diff.txt \\
+    text-files-compressor git-diff ./project --out diff.txt \\
         --extensions java,kts,xml,json,toml,md,yml,yaml
 ";

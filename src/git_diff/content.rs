@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::process::Command;
 
@@ -7,62 +5,70 @@ use crate::config::Config;
 use crate::transforms::transform_content;
 use crate::utils::is_binary_bytes;
 
+pub(crate) enum FileContent {
+    Content(String),
+    Binary,
+    NonUtf8,
+    Missing,
+}
+
 pub(crate) fn read_file_content(
     base_path: &Path,
     relative_path: &str,
     config: &Config,
-) -> Option<String> {
-    let mut content = String::new();
+) -> FileContent {
+    let path = base_path.join(relative_path);
+    let Ok(bytes) = std::fs::read(&path) else {
+        return FileContent::Missing;
+    };
 
-    File::open(base_path.join(relative_path))
-        .ok()?
-        .read_to_string(&mut content)
-        .ok()?;
+    if is_binary_bytes(&bytes) {
+        return FileContent::Binary;
+    }
 
-    Some(transform_content(
-        &content,
-        config.eol_mode,
-        config.indent_rle,
-        config.trim_trailing,
-        config.collapse_blank_lines,
-    ))
+    match String::from_utf8(bytes) {
+        Ok(content) => FileContent::Content(transform_content(
+            &content,
+            config.eol_mode,
+            config.indent_rle,
+            config.trim_trailing,
+            config.collapse_blank_lines,
+        )),
+        Err(_) => FileContent::NonUtf8,
+    }
 }
 
 pub(crate) fn read_git_show_content(
     base_path: &Path,
     relative_path: &str,
     config: &Config,
-) -> Option<String> {
+) -> FileContent {
     let output = Command::new("git")
         .args(["show", &format!("HEAD:{relative_path}")])
         .current_dir(base_path)
-        .output()
-        .ok()?;
+        .output();
 
-    (output.status.success()
-        && !is_binary_bytes(&output.stdout))
-    .then(|| String::from_utf8(output.stdout).ok())
-    .flatten()
-    .map(|content| {
-        transform_content(
-            &content,
-            config.eol_mode,
-            config.indent_rle,
-            config.trim_trailing,
-            config.collapse_blank_lines,
-        )
-    })
-}
+    let Ok(output) = output else {
+        return FileContent::Missing;
+    };
 
-pub(crate) fn write_with_newline(
-    writer: &mut BufWriter<File>,
-    value: &str,
-) -> std::io::Result<()> {
-    write!(writer, "{value}")?;
-
-    if !value.ends_with('\n') {
-        writeln!(writer)?;
+    if !output.status.success() {
+        return FileContent::Missing;
     }
 
-    Ok(())
+    if is_binary_bytes(&output.stdout) {
+        return FileContent::Binary;
+    }
+
+    let Ok(content) = String::from_utf8(output.stdout) else {
+        return FileContent::NonUtf8;
+    };
+
+    FileContent::Content(transform_content(
+        &content,
+        config.eol_mode,
+        config.indent_rle,
+        config.trim_trailing,
+        config.collapse_blank_lines,
+    ))
 }

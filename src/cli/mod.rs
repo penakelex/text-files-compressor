@@ -1,4 +1,5 @@
 mod args;
+mod convert;
 mod filters;
 mod help;
 mod paths;

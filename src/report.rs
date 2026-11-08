@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use crate::output::out;
 use crate::utils::extension_of;
 
 #[derive(Default)]
@@ -15,27 +16,20 @@ fn insert_path(root: &mut TreeNode, path: &str) {
         .split('/')
         .filter(|part| !part.is_empty())
     {
-        current = current
-            .children
-            .entry(part.to_string())
-            .or_default();
+        current =
+            current.children.entry(part.to_string()).or_default();
     }
 }
 
 fn print_tree_recursive(node: &TreeNode, prefix: &str) {
     let children_count = node.children.len();
 
-    for (index, (name, child)) in
-        node.children.iter().enumerate()
-    {
+    for (index, (name, child)) in node.children.iter().enumerate() {
         let is_last = index + 1 == children_count;
-        let connector = if is_last {
-            "└── "
-        } else {
-            "├── "
-        };
+        let connector =
+            if is_last { "└── " } else { "├── " };
 
-        println!("{prefix}{connector}{name}");
+        out!("{prefix}{connector}{name}");
 
         let tail = if is_last { "    " } else { "│   " };
         let new_prefix = format!("{prefix}{tail}");
@@ -46,12 +40,11 @@ fn print_tree_recursive(node: &TreeNode, prefix: &str) {
 
 fn print_captured_tree(paths: &[&str]) {
     if paths.is_empty() {
-        println!("   (нет захваченных файлов)");
+        out!("   (нет захваченных файлов)");
         return;
     }
 
     let mut root = TreeNode::default();
-
     for path in paths {
         insert_path(&mut root, path);
     }
@@ -61,60 +54,48 @@ fn print_captured_tree(paths: &[&str]) {
 
 fn print_extensions(paths: &[&str]) {
     if paths.is_empty() {
-        println!("   (нет файлов)");
+        out!("   (нет файлов)");
         return;
     }
 
-    let mut counts: BTreeMap<String, usize> =
-        BTreeMap::new();
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
 
     for path in paths {
-        let extension =
-            extension_of(path).unwrap_or_else(|| {
-                "<без расширения>".to_string()
-            });
+        let extension = extension_of(path)
+            .unwrap_or_else(|| "<без расширения>".to_string());
 
         *counts.entry(extension).or_insert(0) += 1;
     }
 
     let mut entries: Vec<_> = counts.into_iter().collect();
-
     entries.sort_by(|left, right| {
         right.1.cmp(&left.1).then(left.0.cmp(&right.0))
     });
 
     for (extension, count) in entries {
         if extension.starts_with('<') {
-            println!("   {extension} — {count} файл(ов)");
+            out!("   {extension} — {count} файл(ов)");
         } else {
-            println!(
-                "   .{extension:<10} — {count} файл(ов)"
-            );
+            out!("   .{extension:<10} — {count} файл(ов)");
         }
     }
 }
 
 pub fn print_captured_overview(paths: &[&str]) {
-    println!("\n🌳 Захваченные файлы:");
-
+    out!("\n🌳 Захваченные файлы:");
     print_captured_tree(paths);
-
-    println!("\n📄 Расширения захваченных файлов:");
-
+    out!("\n📄 Расширения захваченных файлов:");
     print_extensions(paths);
 }
 
-pub fn print_skipped_binary(
-    skipped: &[String],
-    indent: &str,
-) {
+pub fn print_skipped(skipped: &[String], indent: &str, label: &str) {
     if skipped.is_empty() {
         return;
     }
 
-    println!("{indent}Пропущенные файлы:");
+    out!("{indent}{label}:");
 
     for path in skipped {
-        println!("{indent}- {path}");
+        out!("{indent}- {path}");
     }
 }

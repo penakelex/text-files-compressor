@@ -1,54 +1,46 @@
-use crate::config::{Config, RLE_CHAR};
+use crate::config::Config;
+use crate::output::out;
 
 use super::paths::display_path;
 
+fn fmt_list(items: &[String]) -> String {
+    if items.is_empty() {
+        "(empty)".to_string()
+    } else {
+        items.join(", ")
+    }
+}
+
 pub fn print_preamble(config: &Config) {
-    println!(
-        "🚀 Analyzing: {}",
-        display_path(&config.input_path)
-    );
-    println!(
+    out!("🚀 Analyzing: {}", display_path(&config.input_path));
+    out!(
         "🔧 Mode: {}",
-        if config.git_mode {
-            "Git Diff"
-        } else {
-            "All Files"
-        }
+        if config.git_mode { "Git Diff" } else { "All Files" }
     );
-    println!("📦 Output: {}", config.output_path);
-    println!("📄 Extensions: {:?}", config.extensions);
-    println!(
-        "🚫 Excluded extensions: {:?}",
-        config.exclude_extensions
+    out!("📦 Output: {}", config.output_path.display());
+    out!("📄 Extensions: {}", fmt_list(&config.extensions));
+    out!(
+        "🚫 Excluded extensions: {}",
+        fmt_list(&config.exclude_extensions)
     );
-    println!("📁 Exclude names: {:?}", config.excludes);
-    println!(
-        "⛔ Exclude paths: {:?}",
-        config.exclude_paths
-    );
-    println!(
-        "📂 Include paths: {:?}",
-        config.include_paths
-    );
-    println!(
+    out!("📁 Exclude names: {}", fmt_list(&config.excludes));
+    out!("⛔ Exclude paths: {}", fmt_list(&config.exclude_paths));
+    out!("📂 Include paths: {}", fmt_list(&config.include_paths));
+    out!(
         "🎨 Indent RLE: {}",
-        if config.indent_rle {
-            format!("on ({RLE_CHAR:?})")
-        } else {
-            "off".into()
-        }
+        if config.indent_rle { "on (tab)" } else { "off" }
     );
-    println!("📝 EOL: {}", config.eol_mode.label());
-    println!(
+    out!("📝 EOL: {}", config.eol_mode.label());
+    out!(
         "✂️  Trim trailing: {}",
         if config.trim_trailing { "on" } else { "off" }
     );
-    println!(
+    out!(
         "📉 Blank lines: {}",
         config.collapse_blank_lines.map_or_else(
             || "off".into(),
             |lines| format!("max {lines}"),
         )
     );
-    println!("-----------------------------------");
+    out!("-----------------------------------");
 }

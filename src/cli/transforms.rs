@@ -22,10 +22,7 @@ pub struct Transforms {
     )]
     pub eol_mode: EolMode,
 
-    #[arg(
-        long,
-        help = "Срезать пробелы и табы в конце строк."
-    )]
+    #[arg(long, help = "Срезать пробелы и табы в конце строк.")]
     pub trim_trailing: bool,
 
     #[arg(

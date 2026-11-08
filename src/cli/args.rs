@@ -2,11 +2,9 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 
-use super::filters::{Filters, default_excludes};
+use super::filters::Filters;
 use super::help::{AFTER_HELP, HELP_TEMPLATE};
-use super::paths::default_output_name;
 use super::transforms::Transforms;
-use crate::config::Config;
 
 #[derive(Parser)]
 #[command(
@@ -27,10 +25,22 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
 
-    #[arg(short = 'h', long = "help", action = clap::ArgAction::Help, help = "Показать эту справку.")]
+    #[arg(
+        short = 'h',
+        long = "help",
+        action = clap::ArgAction::Help,
+        help = "Показать эту справку."
+    )]
+    #[allow(dead_code)]
     help: Option<bool>,
 
-    #[arg(short = 'V', long = "version", action = clap::ArgAction::Version, help = "Показать версию.")]
+    #[arg(
+        short = 'V',
+        long = "version",
+        action = clap::ArgAction::Version,
+        help = "Показать версию."
+    )]
+    #[allow(dead_code)]
     version: Option<bool>,
 }
 
@@ -65,10 +75,10 @@ pub struct CommonArgs {
 
     #[arg(
         long,
-        help = "Имя выходного файла. По умолчанию: <имя input_path>.txt \
+        help = "Путь к выходному файлу. По умолчанию: <имя input_path>.txt \
                 для compress и <имя input_path>.git-diff.txt для git-diff."
     )]
-    pub out: Option<String>,
+    pub out: Option<PathBuf>,
 
     #[command(flatten)]
     pub filters: Filters,
@@ -83,52 +93,6 @@ pub struct CommonArgs {
         help = "Показать эту справку.",
         help_heading = "Опции"
     )]
+    #[allow(dead_code)]
     help: Option<bool>,
-}
-
-impl CommonArgs {
-    pub fn into_config(self, git_mode: bool) -> Config {
-        let Filters {
-            extensions,
-            exclude_extensions,
-            exclude,
-            exclude_paths,
-            include_paths,
-        } = self.filters;
-        let Transforms {
-            indent_rle,
-            eol_mode,
-            trim_trailing,
-            collapse_blank_lines,
-        } = self.transforms;
-
-        let mut excludes = default_excludes();
-        for item in exclude {
-            let lower = item.trim().to_lowercase();
-            if !lower.is_empty()
-                && !excludes.contains(&lower)
-            {
-                excludes.push(lower);
-            }
-        }
-
-        let output_path = self.out.unwrap_or_else(|| {
-            default_output_name(&self.input_path, git_mode)
-        });
-
-        Config {
-            input_path: self.input_path,
-            output_path,
-            extensions,
-            exclude_extensions,
-            excludes,
-            exclude_paths,
-            include_paths,
-            git_mode,
-            indent_rle,
-            eol_mode,
-            trim_trailing,
-            collapse_blank_lines,
-        }
-    }
 }

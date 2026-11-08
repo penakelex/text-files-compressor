@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 
 pub(crate) fn resolve_path(path: &Path) -> PathBuf {
-    std::fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf())
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 pub(crate) fn display_path(path: &Path) -> String {
