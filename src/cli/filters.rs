@@ -40,8 +40,9 @@ pub struct Filters {
         alias = "excludes",
         num_args = 1..,
         value_delimiter = ',',
-        help = "Имена директорий для исключения (на любой глубине). \
-                По умолчанию — встроенный список из resources/default_excludes.txt."
+        help = "Имена директорий и файлов для исключения (на любой глубине). \
+                Добавляются к встроенному списку по умолчанию. \
+                Поддерживаются glob-шаблоны (*, ?, **, [...], {...})."
     )]
     pub exclude: Vec<String>,
 
@@ -50,7 +51,9 @@ pub struct Filters {
         alias = "exclude-path",
         num_args = 1..,
         value_delimiter = ',',
-        help = "Исключить пути (файлы/директории) относительно input_path."
+        help = "Исключить пути (файлы/директории) относительно input_path. \
+                Поддерживаются glob-шаблоны: *, ?, **, [...], {...}. \
+                Пример: --exclude-paths target/**,src/**/test_*,*.log"
     )]
     pub exclude_paths: Vec<String>,
 
@@ -59,7 +62,9 @@ pub struct Filters {
         aliases = ["include-dirs", "only-dirs", "only-paths"],
         num_args = 1..,
         value_delimiter = ',',
-        help = "Белый список путей (файлы и/или директории). \".\" — корень."
+        help = "Белый список путей (файлы и/или директории). \".\" — корень. \
+                Поддерживаются glob-шаблоны: *, ?, **, [...], {...}. \
+                Пример: --include-paths src/**,config/*.json"
     )]
     pub include_paths: Vec<String>,
 }

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::filters::{
-    dir_on_way_or_inside, file_passes_filters,
+    dir_on_way_or_inside, file_passes_filters, is_excluded,
     is_path_excluded,
 };
 use crate::utils::is_binary_file;
@@ -25,14 +25,6 @@ pub(crate) fn process_directory(
     for entry in entries.flatten() {
         let path = entry.path();
 
-        let Some(file_name) = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .map(str::to_lowercase)
-        else {
-            continue;
-        };
-
         let relative_path = path
             .strip_prefix(&config.input_path)
             .unwrap_or(&path)
@@ -40,7 +32,7 @@ pub(crate) fn process_directory(
             .to_string();
 
         if path.is_dir() {
-            if config.excludes.contains(&file_name)
+            if is_excluded(&relative_path, &config.excludes)
                 || is_path_excluded(
                     &relative_path,
                     &config.exclude_paths,
@@ -72,15 +64,19 @@ pub(crate) fn process_directory(
             continue;
         }
 
-        stats.captured.push(relative_path);
-
-        write_file_content(
+        let captured = write_file_content(
             &config.input_path,
             &path,
             writer,
             &mut stats.line_count,
             config,
         )?;
+
+        if captured {
+            stats.captured.push(relative_path);
+        } else {
+            stats.skipped_binary.push(relative_path);
+        }
     }
 
     Ok(())

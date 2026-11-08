@@ -102,11 +102,15 @@ impl CommonArgs {
             collapse_blank_lines,
         } = self.transforms;
 
-        let excludes = if exclude.is_empty() {
-            default_excludes()
-        } else {
-            exclude
-        };
+        let mut excludes = default_excludes();
+        for item in exclude {
+            let lower = item.trim().to_lowercase();
+            if !lower.is_empty()
+                && !excludes.contains(&lower)
+            {
+                excludes.push(lower);
+            }
+        }
 
         let output_path = self.out.unwrap_or_else(|| {
             default_output_name(&self.input_path, git_mode)

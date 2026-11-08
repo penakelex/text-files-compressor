@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufWriter, Read, Write};
+use std::io::{BufWriter, Write};
 use std::path::Path;
 
 use crate::config::Config;
@@ -11,17 +11,20 @@ pub(crate) fn write_file_content(
     writer: &mut BufWriter<File>,
     line_count: &mut u64,
     config: &Config,
-) -> std::io::Result<()> {
+) -> std::io::Result<bool> {
+    let Ok(bytes) = std::fs::read(path) else {
+        return Ok(false);
+    };
+    let Ok(content) = String::from_utf8(bytes) else {
+        return Ok(false);
+    };
+
     let display_path = path
         .strip_prefix(root_path)
         .unwrap_or(path)
         .display();
 
     writeln!(writer, "### {display_path}")?;
-
-    let mut content = String::new();
-
-    File::open(path)?.read_to_string(&mut content)?;
 
     let transformed = transform_content(
         &content,
@@ -42,5 +45,5 @@ pub(crate) fn write_file_content(
         writer.write_all(b"\n")?;
     }
 
-    Ok(())
+    Ok(true)
 }
