@@ -8,7 +8,6 @@ mod transforms;
 mod utils;
 
 use clap::Parser;
-
 use cli::{Cli, Command, print_preamble};
 use compress::compress;
 use git_diff::process_git_diff;
